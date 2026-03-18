@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "AirField"
-version = "0.2.0"
+version = "0.3.0"
 description = "Dataclasses that describe how Pydantic model fields should be presented in any UI context: web forms, CLI prompts, data tables, notebooks, API docs, charts."
 readme = "README.md"
 authors = [
