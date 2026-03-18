@@ -10,12 +10,14 @@ from pydantic import BaseModel
 import airfield
 from airfield import (
     AirField,
+    Autofocus,
     BasePresentation,
     Choices,
     HelpText,
     Hidden,
     Label,
     Placeholder,
+    PrimaryKey,
     ReadOnly,
     Widget,
 )
@@ -106,6 +108,20 @@ class TestAirFieldProducesTypedMetadata:
         assert meta is not None
         assert meta.options == (("r", "Red"), ("g", "Green"))
 
+    def test_primary_key(self):
+        class M(BaseModel):
+            id: int = AirField(primary_key=True)
+
+        meta = _get_meta(M, "id", PrimaryKey)
+        assert meta is not None
+
+    def test_autofocus(self):
+        class M(BaseModel):
+            name: str = AirField(autofocus=True)
+
+        meta = _get_meta(M, "name", Autofocus)
+        assert meta is not None
+
     def test_multiple_metadata(self):
         """A field with several kwargs gets multiple typed metadata objects."""
 
@@ -122,6 +138,23 @@ class TestAirFieldProducesTypedMetadata:
 
         all_meta = _get_all_meta(M, "name")
         assert all_meta == []
+
+    def test_all_kwargs_together(self):
+        """Every AirField kwarg produces its typed metadata."""
+
+        class M(BaseModel):
+            email: str = AirField(
+                primary_key=True,
+                type="email",
+                label="Email",
+                placeholder="you@example.com",
+                help_text="Your email address",
+                autofocus=True,
+            )
+
+        all_meta = _get_all_meta(M, "email")
+        types = {type(m) for m in all_meta}
+        assert types == {PrimaryKey, Widget, Label, Placeholder, HelpText, Autofocus}
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +187,7 @@ class TestAirFieldPydanticPassthrough:
         assert M(age=25).age == 25
 
     def test_json_schema_extra_passthrough(self):
-        """Explicit json_schema_extra should still be set on the field."""
+        """Explicit json_schema_extra passes through to Pydantic."""
 
         class M(BaseModel):
             name: str = AirField(json_schema_extra={"x-custom": True})
@@ -164,14 +197,50 @@ class TestAirFieldPydanticPassthrough:
         assert extra is not None
         assert extra["x-custom"] is True
 
-    def test_extra_kwargs_in_json_schema_extra(self):
-        """Unknown kwargs should end up in json_schema_extra."""
+    def test_unknown_kwargs_warn(self):
+        """Unknown kwargs trigger Pydantic's deprecation warning."""
+        with pytest.warns(DeprecationWarning, match="extra keyword arguments"):
+            AirField(custom_attr="custom_value")
 
+
+# ---------------------------------------------------------------------------
+# AirField does not write to json_schema_extra
+# ---------------------------------------------------------------------------
+
+
+class TestNoJsonSchemaExtra:
+    """AirField should never write to json_schema_extra itself."""
+
+    def test_primary_key_not_in_json_schema_extra(self):
         class M(BaseModel):
-            name: str = AirField(custom_attr="custom_value")
+            id: int = AirField(primary_key=True)
+
+        field_info = M.model_fields["id"]
+        assert field_info.json_schema_extra is None
+
+    def test_autofocus_not_in_json_schema_extra(self):
+        class M(BaseModel):
+            name: str = AirField(autofocus=True)
 
         field_info = M.model_fields["name"]
-        assert field_info.json_schema_extra["custom_attr"] == "custom_value"
+        assert field_info.json_schema_extra is None
+
+    def test_label_not_in_json_schema_extra(self):
+        class M(BaseModel):
+            name: str = AirField(label="Name")
+
+        field_info = M.model_fields["name"]
+        assert field_info.json_schema_extra is None
+
+    def test_explicit_json_schema_extra_still_works(self):
+        """User-provided json_schema_extra passes through untouched."""
+
+        class M(BaseModel):
+            name: str = AirField(label="Name", json_schema_extra={"x-foo": 1})
+
+        field_info = M.model_fields["name"]
+        assert field_info.json_schema_extra == {"x-foo": 1}
+        assert _get_meta(M, "name", Label).text == "Name"
 
 
 # ---------------------------------------------------------------------------
@@ -222,6 +291,20 @@ class TestAnnotatedMetadata:
         assert meta.in_context("form") is True
         assert meta.in_context("table") is False
 
+    def test_annotated_primary_key(self):
+        class M(BaseModel):
+            id: Annotated[int, PrimaryKey()]
+
+        meta = _get_meta(M, "id", PrimaryKey)
+        assert meta is not None
+
+    def test_annotated_autofocus(self):
+        class M(BaseModel):
+            name: Annotated[str, Autofocus()]
+
+        meta = _get_meta(M, "name", Autofocus)
+        assert meta is not None
+
 
 # ---------------------------------------------------------------------------
 # Both paths produce equivalent metadata
@@ -236,7 +319,6 @@ class TestBothPathsEquivalent:
             email_a: str = AirField(type="email", label="Email")
             email_b: Annotated[str, Widget("email"), Label("Email")]
 
-        # Both should have Widget and Label
         for field_name in ("email_a", "email_b"):
             w = _get_meta(M, field_name, Widget)
             l = _get_meta(M, field_name, Label)
@@ -245,52 +327,20 @@ class TestBothPathsEquivalent:
             assert w.kind == "email"
             assert l.text == "Email"
 
-
-# ---------------------------------------------------------------------------
-# Autofocus (boolean flag, stored in json_schema_extra for now)
-# ---------------------------------------------------------------------------
-
-
-class TestAutofocus:
-    """autofocus is a rendering hint, stored in json_schema_extra."""
-
-    def test_autofocus_in_json_schema_extra(self):
+    def test_primary_key_both_paths(self):
         class M(BaseModel):
-            name: str = AirField(autofocus=True)
+            id_a: int = AirField(primary_key=True)
+            id_b: Annotated[int, PrimaryKey()]
 
-        field_info = M.model_fields["name"]
-        extra = field_info.json_schema_extra or {}
-        assert extra.get("autofocus") is True
+        for field_name in ("id_a", "id_b"):
+            pk = _get_meta(M, field_name, PrimaryKey)
+            assert pk is not None, f"{field_name} missing PrimaryKey"
 
-    def test_no_autofocus_by_default(self):
+    def test_autofocus_both_paths(self):
         class M(BaseModel):
-            name: str = AirField()
+            name_a: str = AirField(autofocus=True)
+            name_b: Annotated[str, Autofocus()]
 
-        field_info = M.model_fields["name"]
-        extra = field_info.json_schema_extra or {}
-        assert "autofocus" not in extra
-
-
-# ---------------------------------------------------------------------------
-# Primary key (database metadata, stored in json_schema_extra)
-# ---------------------------------------------------------------------------
-
-
-class TestPrimaryKey:
-    """primary_key is database metadata, stored in json_schema_extra."""
-
-    def test_primary_key_in_json_schema_extra(self):
-        class M(BaseModel):
-            id: int = AirField(primary_key=True)
-
-        field_info = M.model_fields["id"]
-        extra = field_info.json_schema_extra or {}
-        assert extra.get("primary_key") is True
-
-    def test_no_primary_key_by_default(self):
-        class M(BaseModel):
-            id: int = AirField()
-
-        field_info = M.model_fields["id"]
-        extra = field_info.json_schema_extra or {}
-        assert "primary_key" not in extra
+        for field_name in ("name_a", "name_b"):
+            af = _get_meta(M, field_name, Autofocus)
+            assert af is not None, f"{field_name} missing Autofocus"

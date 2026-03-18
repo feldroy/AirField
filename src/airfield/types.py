@@ -25,6 +25,21 @@ class BasePresentation:
 
 
 # ---------------------------------------------------------------------------
+# Identity and structure
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class PrimaryKey(BasePresentation):
+    """Marks this field as the primary identity for the record.
+
+    Affects presentation across contexts: typically hidden in create
+    forms, read-only in edit forms, displayed as a link in tables,
+    used as the record identifier in detail views and URLs.
+    """
+
+
+# ---------------------------------------------------------------------------
 # Identity and labeling
 # ---------------------------------------------------------------------------
 
@@ -148,6 +163,23 @@ class ColumnWidth(BasePresentation):
     weight: float = 1.0
     min_chars: int | None = None
     max_chars: int | None = None
+
+
+# ---------------------------------------------------------------------------
+# Focus and interaction
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class Autofocus(BasePresentation):
+    """This field should receive input focus when the UI context loads.
+
+    In a form: sets the autofocus attribute on the input.
+    In a CLI: this field is prompted first.
+    In a TUI: this widget receives initial focus.
+
+    Only one field per form/view should have this.
+    """
 
 
 # ---------------------------------------------------------------------------
