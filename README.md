@@ -11,7 +11,64 @@ Dataclasses that describe how Pydantic model fields should be presented in any U
 
 ## Features
 
-* TODO
+`annotated-types` is for validation. AirField is for presentation. Pydantic reads both.
+
+```python
+from pydantic import BaseModel
+from airfield import AirField, Label, Widget, Autofocus, PrimaryKey
+
+class Article(BaseModel):
+    id: int = AirField(primary_key=True)
+    title: str = AirField(label="Title", autofocus=True)
+    email: str = AirField(type="email", label="Email Address")
+    body: str = AirField(widget="textarea", placeholder="Write something...")
+```
+
+> **Note:** AirField works with any Pydantic `BaseModel`. If you're using [Air](https://github.com/feldroy/air), use `AirModel` instead, which extends BaseModel with ORM and form support.
+
+Every parameter produces a typed, frozen dataclass in `field_info.metadata`. Consumers discover metadata with `isinstance` checks:
+
+```python
+for m in field_info.metadata:
+    if isinstance(m, Widget):
+        render_input(m.kind)
+    elif isinstance(m, Label):
+        render_label(m.text)
+    elif isinstance(m, PrimaryKey):
+        make_read_only()
+```
+
+Two ways to declare, same result:
+
+```python
+# Convenience function
+email: str = AirField(type="email", label="Email")
+
+# Annotated metadata (composable with annotated-types, etc.)
+email: Annotated[str, Widget("email"), Label("Email")]
+```
+
+### Presentation types
+
+| Type | Purpose |
+|---|---|
+| `PrimaryKey` | Field is the record identity (affects visibility, editability, linking) |
+| `Label` | Human-readable display name |
+| `Placeholder` | Hint text when the field is empty |
+| `HelpText` | Explanatory text that supplements the label |
+| `Widget` | Preferred input mechanism (`"email"`, `"textarea"`, `"date"`, ...) |
+| `DisplayFormat` | How to format the value for display (`"currency"`, `"percent"`, ...) |
+| `Choices` | Constrain to labeled options (select, radio, combobox) |
+| `Autofocus` | This field receives focus when the UI loads |
+| `Hidden` | Field is not shown in specified contexts |
+| `ReadOnly` | Field is displayed but not editable |
+| `Filterable` | Field appears in search/filter UI |
+| `Sortable` | Field is sortable in list/table views |
+| `ColumnAlign` | Left/center/right alignment in tables |
+| `ColumnWidth` | Relative width in table columns |
+| `Grouped` | Assigns to a named group for layout |
+| `Priority` | Importance relative to siblings |
+| `Compact` | How to represent in space-constrained contexts |
 
 ## Documentation
 
