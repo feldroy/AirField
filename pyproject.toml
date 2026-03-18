@@ -50,8 +50,8 @@ changelog = "https://github.com/feldroy/AirField/releases"
 documentation = "https://feldroy.github.io/AirField/"
 homepage = "https://github.com/feldroy/AirField"
 
-[project.scripts]
-airfield = "airfield.cli:app"
+# [project.scripts]
+# airfield = "airfield.cli:app"
 
 [tool.ty]
 # All rules are enabled as "error" by default; no need to specify unless overriding.

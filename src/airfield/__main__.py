@@ -1,4 +1,1 @@
-from .cli import app
-
-if __name__ == "__main__":
-    app()
+# TODO: python -m airfield entry point for the CLI
