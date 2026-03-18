@@ -2,8 +2,9 @@
 
 Wraps pydantic.Field with parameters for database metadata (primary_key)
 and UI presentation (type, label, widget, choices, placeholder, help_text,
-autofocus). Stores presentation metadata in json_schema_extra so both ORM
-and form renderers can read what they need.
+autofocus). Stores presentation metadata as typed objects in
+field_info.metadata so consumers can discover them with isinstance checks,
+the same way Pydantic discovers annotated-types constraints.
 """
 
 from __future__ import annotations
@@ -11,6 +12,9 @@ from __future__ import annotations
 from typing import Any
 
 from pydantic import Field as PydanticField
+from pydantic.fields import FieldInfo
+
+from airfield.types import Choices, HelpText, Label, Placeholder, Widget
 
 # Parameters that pydantic.Field accepts (so we know which **kwargs to forward
 # vs. which to stuff into json_schema_extra as extra metadata).
@@ -49,8 +53,11 @@ def AirField(  # noqa: N802
     ``help_text``, ``autofocus``), all standard ``pydantic.Field``
     parameters, and arbitrary extra keyword arguments.
 
-    Extra kwargs that pydantic.Field doesn't recognize are stored in
-    ``json_schema_extra`` alongside the presentation metadata.
+    Presentation kwargs become typed metadata objects in
+    ``field_info.metadata`` (Widget, Label, etc.). Database and
+    rendering-specific flags (primary_key, autofocus) go into
+    ``json_schema_extra``. Extra kwargs that pydantic.Field doesn't
+    recognize also go into ``json_schema_extra``.
 
     Returns:
         A Pydantic FieldInfo configured with all specified parameters.
@@ -61,21 +68,9 @@ def AirField(  # noqa: N802
     if primary_key:
         schema_extra["primary_key"] = True
 
-    # UI presentation metadata
-    if type:
-        schema_extra[type] = True
-    if label:
-        schema_extra["label"] = label
-    if widget:
-        schema_extra["widget"] = widget
-    if choices:
-        schema_extra["choices"] = choices
+    # Rendering-specific flags (not presentation metadata)
     if autofocus:
         schema_extra["autofocus"] = True
-    if placeholder:
-        schema_extra["placeholder"] = placeholder
-    if help_text:
-        schema_extra["help_text"] = help_text
 
     # Separate pydantic-known kwargs from extras
     pydantic_kwargs: dict[str, Any] = {}
@@ -85,10 +80,27 @@ def AirField(  # noqa: N802
         else:
             schema_extra[key] = value
 
-    pydantic_kwargs["json_schema_extra"] = schema_extra
+    if schema_extra:
+        pydantic_kwargs["json_schema_extra"] = schema_extra
     if default is not ...:
         pydantic_kwargs["default"] = default
     if default_factory is not None:
         pydantic_kwargs["default_factory"] = default_factory
 
-    return PydanticField(**pydantic_kwargs)
+    field_info: FieldInfo = PydanticField(**pydantic_kwargs)
+
+    # Build typed presentation metadata
+    if type:
+        field_info.metadata.append(Widget(kind=type))
+    if widget:
+        field_info.metadata.append(Widget(kind=widget))
+    if label:
+        field_info.metadata.append(Label(text=label))
+    if placeholder:
+        field_info.metadata.append(Placeholder(text=placeholder))
+    if help_text:
+        field_info.metadata.append(HelpText(text=help_text))
+    if choices:
+        field_info.metadata.append(Choices(*choices))
+
+    return field_info
