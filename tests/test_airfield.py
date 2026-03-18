@@ -182,7 +182,7 @@ class TestAirFieldPydanticPassthrough:
         class M(BaseModel):
             age: int = AirField(ge=0, le=150)
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match="greater than or equal"):
             M(age=-1)
         assert M(age=25).age == 25
 
@@ -321,11 +321,11 @@ class TestBothPathsEquivalent:
 
         for field_name in ("email_a", "email_b"):
             w = _get_meta(M, field_name, Widget)
-            l = _get_meta(M, field_name, Label)
+            label = _get_meta(M, field_name, Label)
             assert w is not None, f"{field_name} missing Widget"
-            assert l is not None, f"{field_name} missing Label"
+            assert label is not None, f"{field_name} missing Label"
             assert w.kind == "email"
-            assert l.text == "Email"
+            assert label.text == "Email"
 
     def test_primary_key_both_paths(self):
         class M(BaseModel):
