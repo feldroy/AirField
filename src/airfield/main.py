@@ -75,6 +75,9 @@ def AirField(  # noqa: N802
         field_info.metadata.append(HelpText(text=help_text))
     if choices:
         field_info.metadata.append(Choices(*choices))
+        # Choices implies a select widget unless explicitly overridden
+        if not type and not widget:
+            field_info.metadata.append(Widget(kind="select"))
     if autofocus:
         field_info.metadata.append(Autofocus())
 
