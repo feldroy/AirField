@@ -74,9 +74,10 @@ presentation = [m for m in field_info.metadata if isinstance(m, BasePresentation
 
 Every type is a frozen dataclass with `__slots__`, inheriting from `BasePresentation`.
 
-### Identity
+### Identity and security
 
 - **`PrimaryKey()`** -- marks the field as the record identity. Affects presentation: typically hidden in create forms, read-only in edit forms, displayed as a link in tables.
+- **`CsrfToken()`** -- marks the field as a CSRF protection token. Form renderers should render it as a hidden input with a signed value. Form validators should verify the signature before processing other fields. The field should not appear in user-facing form layouts.
 
 ### Labeling
 
@@ -88,7 +89,7 @@ Every type is a frozen dataclass with `__slots__`, inheriting from `BasePresenta
 
 - **`Widget(kind)`** -- preferred input mechanism. Standard kinds: `text`, `textarea`, `date`, `datetime`, `time`, `color`, `email`, `url`, `password`, `file`, `hidden`, `toggle`, `slider`, `rating`, `rich_text`, `code`, `search`, `phone`, `currency`, `autocomplete`. Unknown kinds fall back to `"text"`.
 - **`DisplayFormat(pattern, locale=None)`** -- how to format the value for display: `"percent"`, `"currency"`, `"bytes"`, `"relative_time"`, or a strftime pattern.
-- **`Choices(*options)`** -- constrains to labeled options. Each option is `(value, display_label)`.
+- **`Choices(*options)`** -- constrains to labeled options. Each option is `(value, display_label)`. When passed through `AirField(choices=...)`, a `Widget(kind="select")` is attached automatically unless `type` or `widget` is explicitly set.
 
 ### Focus
 

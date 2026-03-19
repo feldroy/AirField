@@ -53,12 +53,13 @@ email: Annotated[str, Widget("email"), Label("Email")]
 | Type | Purpose |
 |---|---|
 | `PrimaryKey` | Field is the record identity (affects visibility, editability, linking) |
+| `CsrfToken` | CSRF protection token (hidden input, signature verification) |
 | `Label` | Human-readable display name |
 | `Placeholder` | Hint text when the field is empty |
 | `HelpText` | Explanatory text that supplements the label |
 | `Widget` | Preferred input mechanism (`"email"`, `"textarea"`, `"date"`, ...) |
 | `DisplayFormat` | How to format the value for display (`"currency"`, `"percent"`, ...) |
-| `Choices` | Constrain to labeled options (select, radio, combobox) |
+| `Choices` | Constrain to labeled options; implies `Widget("select")` by default |
 | `Autofocus` | This field receives focus when the UI loads |
 | `Hidden` | Field is not shown in specified contexts |
 | `ReadOnly` | Field is displayed but not editable |
