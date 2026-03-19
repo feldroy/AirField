@@ -39,6 +39,17 @@ class PrimaryKey(BasePresentation):
     """
 
 
+@dataclass(frozen=True, slots=True)
+class CsrfToken(BasePresentation):
+    """Marks this field as a CSRF protection token.
+
+    Form renderers should render this as a hidden input with a
+    signed value. Form validators should verify the signature
+    before processing other fields. The field should not appear
+    in user-facing form layouts.
+    """
+
+
 # ---------------------------------------------------------------------------
 # Identity and labeling
 # ---------------------------------------------------------------------------
