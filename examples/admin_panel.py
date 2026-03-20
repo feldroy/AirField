@@ -17,29 +17,23 @@ from pydantic import BaseModel
 
 from airfield import (
     AirField,
-    Autofocus,
-    BasePresentation,
-    Choices,
     ColumnAlign,
     ColumnWidth,
     Compact,
     DisplayFormat,
     Filterable,
     Grouped,
-    HelpText,
     Hidden,
     Label,
     Priority,
-    PrimaryKey,
     ReadOnly,
     Sortable,
-    Widget,
 )
-
 
 # ---------------------------------------------------------------------------
 # 1. Product
 # ---------------------------------------------------------------------------
+
 
 class Product(BaseModel):
     # primary key — AirField(primary_key=True) appends PrimaryKey() internally.
@@ -121,6 +115,7 @@ class Product(BaseModel):
 # 2. UserProfile
 # ---------------------------------------------------------------------------
 
+
 class UserProfile(BaseModel):
     # Primary key.
     id: int = AirField(primary_key=True)
@@ -180,6 +175,7 @@ class UserProfile(BaseModel):
 # 3. render_table_headers
 # ---------------------------------------------------------------------------
 
+
 def render_table_headers(model: type[BaseModel]) -> list[dict[str, Any]]:
     """Return ordered column descriptor dicts for visible table columns.
 
@@ -233,9 +229,7 @@ def render_table_headers(model: type[BaseModel]) -> list[dict[str, Any]]:
     # Python's sort is stable, so we can sort once with a composite key:
     #   (0, -level) for Priority fields  →  sort to front, highest first
     #   (1, 0)      for unprioritized    →  maintain declaration order
-    columns.sort(
-        key=lambda c: (0, -(c["_priority"])) if c["_priority"] is not None else (1, 0)
-    )
+    columns.sort(key=lambda c: (0, -(c["_priority"])) if c["_priority"] is not None else (1, 0))
 
     # Strip internal sort key before returning.
     for col in columns:
